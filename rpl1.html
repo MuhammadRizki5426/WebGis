@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peta Bengkel Kota Palu</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="rpl2.css">
+    <!-- Tambahkan ini di bagian head -->
+<style>
+    .user-info {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: white;
+        padding: 12px 18px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid #e0e0e0;
+    }
+</style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-tools"></i>
+                <span>Teman Bengkel</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#" class="nav-link active" data-target="home">Home</a></li>
+                <li><a href="#" class="nav-link" data-target="dashboard">Dashboard</a></li>
+                <li><a href="#" class="nav-link" data-target="peta">Peta</a></li>
+            </ul>
+        </div>
+    </nav>
+    
+    <!-- Home Section -->
+    <section id="home" class="content-section active">
+        <div class="hero">
+            <h1>Temukan Bengkel Terdekat di Kota Palu</h1>
+            <p>Cari bengkel motor, mobil, atau umum dengan mudah di seluruh wilayah Kota Palu. Dapatkan informasi lokasi, alamat, dan jenis layanan yang tersedia.</p>
+            <div class="search-box">
+                <input type="text" id="homeSearch" placeholder="Cari bengkel...">
+                <button id="homeSearchBtn"><i class="fas fa-search"></i> Cari</button>
+            </div>
+        </div>
+        
+        <div class="features">
+            <div class="feature-card">
+                <i class="fas fa-motorcycle"></i>
+                <h3>Bengkel Motor</h3>
+                <p>Temukan bengkel khusus motor dengan teknisi berpengalaman di seluruh Kota Palu.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-car"></i>
+                <h3>Bengkel Mobil</h3>
+                <p>Layanan bengkel mobil lengkap untuk perawatan dan perbaikan kendaraan Anda.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-tools"></i>
+                <h3>Bengkel Umum</h3>
+                <p>Bengkel yang melayani berbagai jenis kendaraan dengan layanan komprehensif.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-map-marked-alt"></i>
+                <h3>Peta Interaktif</h3>
+                <p>Gunakan peta interaktif untuk menemukan bengkel terdekat dari lokasi Anda.</p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Dashboard Section -->
+    <section id="dashboard" class="content-section">
+        <h2>Dashboard Bengkel Kota Palu</h2>
+        <p>Statistik dan informasi terkini tentang bengkel di Kota Palu</p>
+        
+        <div class="dashboard-stats">
+            <div class="stat-card motor">
+                <i class="fas fa-motorcycle"></i>
+                <div class="stat-number" id="motor-count">0</div>
+                <div class="stat-label">Bengkel Motor</div>
+            </div>
+            <div class="stat-card mobil">
+                <i class="fas fa-car"></i>
+                <div class="stat-number" id="mobil-count">0</div>
+                <div class="stat-label">Bengkel Mobil</div>
+            </div>
+            <div class="stat-card umum">
+                <i class="fas fa-tools"></i>
+                <div class="stat-number" id="umum-count">0</div>
+                <div class="stat-label">Bengkel Umum</div>
+            </div>
+            <div class="stat-card total">
+                <i class="fas fa-store"></i>
+                <div class="stat-number" id="total-count">0</div>
+                <div class="stat-label">Total Bengkel</div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <h3>Bengkel Terpopuler</h3>
+            <div id="popular-bengkel" class="bengkel-list" style="position: relative; transform: none; width: 100%; height: auto; box-shadow: none;">
+                <!-- Daftar bengkel populer akan diisi oleh JavaScript -->
+            </div>
+        </div>
+    </section>
+    
+    <!-- Peta Section -->
+    <section id="peta" class="content-section">
+        <h2>Peta Bengkel Kota Palu</h2>
+        <p>Gunakan peta interaktif untuk menemukan bengkel terdekat</p>
+        
+        <div class="controls">
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Cari bengkel...">
+                <button id="searchBtn" class="search-input" style="flex: 0 0 auto;">Cari</button>
+            </div>
+            <div class="filter-container">
+                <select id="typeFilter" class="filter-select">
+                    <option value="all">Semua Jenis</option>
+                    <option value="motor">Bengkel Motor</option>
+                    <option value="mobil">Bengkel Mobil</option>
+                    <option value="umum">Bengkel Umum</option>
+                </select>
+                <select id="areaFilter" class="filter-select">
+                    <option value="all">Semua Area</option>
+                    <option value="barat">Palu Barat</option>
+                    <option value="timur">Palu Timur</option>
+                    <option value="utara">Palu Utara</option>
+                    <option value="selatan">Palu Selatan</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+            <button id="toggleList" class="toggle-list">
+                <i class="fas fa-list"></i> Daftar Bengkel
+            </button>
+            <div id="bengkelList" class="bengkel-list">
+                <div class="bengkel-list-header">
+                    <h2>Daftar Bengkel</h2>
+                    <p>Kota Palu</p>
+                    <div class="bengkel-count" id="bengkelCount">0 bengkel ditemukan</div>
+                </div>
+                <div class="bengkel-items">
+                    <!-- Daftar bengkel akan diisi oleh JavaScript -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal CRUD -->
+    <div id="crudModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Tambah Bengkel Baru</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="bengkelForm">
+                <div class="form-group">
+                    <label for="bengkelName">Nama Bengkel *</label>
+                    <input type="text" id="bengkelName" name="name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="bengkelType">Jenis Bengkel *</label>
+                    <select id="bengkelType" name="type" required>
+                        <option value="motor">Bengkel Motor</option>
+                        <option value="mobil">Bengkel Mobil</option>
+                        <option value="umum">Bengkel Umum</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="bengkelArea">Area *</label>
+                    <select id="bengkelArea" name="area" required>
+                        <option value="barat">Palu Barat</option>
+                        <option value="timur">Palu Timur</option>
+                        <option value="utara">Palu Utara</option>
+                        <option value="selatan">Palu Selatan</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="bengkelAddress">Alamat Lengkap *</label>
+                    <textarea id="bengkelAddress" name="address" rows="3" required></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bengkelLat">Latitude *</label>
+                        <input type="number" id="bengkelLat" name="lat" step="any" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bengkelLng">Longitude *</label>
+                        <input type="number" id="bengkelLng" name="lng" step="any" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="bengkelRating">Rating (0-5)</label>
+                    <input type="number" id="bengkelRating" name="rating" min="0" max="5" step="0.1" value="4.0">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" id="cancelBtn" class="btn-secondary">Batal</button>
+                    <button type="submit" id="submitBtn" class="btn-primary">Simpan Bengkel</button>
+                    <button type="button" id="deleteBtn" class="btn-danger" style="display: none;">Hapus Bengkel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Login -->
+<div id="loginModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Login</h2>
+            <span class="close" id="closeLogin">&times;</span>
+        </div>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="loginType">Login Sebagai</label>
+                <select id="loginType" name="loginType" required>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Login</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tombol Login -->
+<button id="loginBtn" class="floating-btn login-btn">
+    <i class="fas fa-user"></i>
+</button>
+
+<!-- User Info -->
+<div id="userInfo" class="user-info" style="display: none;">
+    <span id="userRole"></span>
+    <button id="logoutBtn" class="btn-secondary btn-small">Logout</button>
+</div>
+
+    <!-- Tombol Tambah Bengkel -->
+    <button id="addBengkelBtn" class="floating-btn">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Memuat data...</p>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="rpl3.js"></script>
+</body>
+</html>
