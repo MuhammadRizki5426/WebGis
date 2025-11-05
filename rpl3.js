@@ -318,6 +318,13 @@ const users = {
     'user2': { password: 'user123', role: 'user', name: 'User Biasa 2' }
 };
 
+// ==================== SUPABASE CONFIGURATION ====================
+const SUPABASE_URL = 'https://itqsxhwjjsopqlnoziui.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0cXN4aHdqanNvcHFsbm96aXVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NzI5OTAsImV4cCI6MjA3NTE0ODk5MH0.nCv1U-uXiVZwG6uVXtzIPDNpIZeYNdolGqOsH32yLD0';
+
+// Inisialisasi Supabase client
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // ==================== SIMPLE LOGIN SYSTEM ====================
 
 /**
@@ -499,58 +506,65 @@ function updateLoginUIForCurrentPage() {
     }
 }
 
-// ==================== LOCAL DATABASE OPERATIONS ====================
+// ==================== SUPABASE DATABASE OPERATIONS ====================
 
 /**
- * Ambil semua data bengkel dari data lokal
+ * Ambil semua data bengkel dari Supabase
  */
 async function fetchBengkelData() {
     showLoading(true);
-    
     try {
-        console.log('📡 Mengambil data bengkel dari data lokal...');
+        const { data, error } = await supabase
+            .from('bengkel')
+            .select('*')
+            .order('name');
         
-        // Simulasi delay loading
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        console.log('✅ Data berhasil diambil:', defaultBengkelData.length, 'bengkel');
-        return defaultBengkelData;
-        
+        if (error) throw error;
+        console.log('✅ Data berhasil diambil:', data?.length || 0, 'bengkel');
+        return data || [];
     } catch (error) {
         console.error('❌ Error mengambil data:', error);
-        showNotification('Terjadi kesalahan saat mengambil data', 'error');
-        return defaultBengkelData;
+        showNotification('Gagal mengambil data bengkel', 'error');
+        return [];
     } finally {
         showLoading(false);
     }
 }
 
 /**
- * Tambah bengkel baru ke data lokal
+ * Tambah bengkel baru ke Supabase
  */
 async function addBengkel(bengkel) {
     showLoading(true);
-    
     try {
-        console.log('➕ Menambah bengkel baru:', bengkel.name);
-        
-        // Generate ID baru
-        const newId = bengkelData.length > 0 ? Math.max(...bengkelData.map(b => b.id)) + 1 : 1;
-        const newBengkel = {
-            ...bengkel,
-            id: newId
+        // Pastikan tipe data numerik benar
+        const bengkelData = {
+            name: bengkel.name,
+            type: bengkel.type,
+            area: bengkel.area,
+            address: bengkel.address,
+            lat: parseFloat(bengkel.lat),
+            lng: parseFloat(bengkel.lng),
+            rating: parseFloat(bengkel.rating)
         };
+
+        console.log('Data yang akan dikirim:', bengkelData);
+
+        const { data, error } = await supabase
+            .from('bengkel')
+            .insert([bengkelData])
+            .select();
+
+        if (error) {
+            console.error('Error detail:', error);
+            throw error;
+        }
         
-        // Tambah ke array data
-        bengkelData.push(newBengkel);
-        
-        console.log('✅ Bengkel berhasil ditambah:', newBengkel);
         showNotification('Bengkel berhasil ditambahkan!', 'success');
-        return newBengkel;
-        
+        return data[0];
     } catch (error) {
-        console.error('❌ Error menambah bengkel:', error);
-        showNotification('Terjadi kesalahan saat menambah bengkel', 'error');
+        console.error('Error menambah bengkel:', error);
+        showNotification(`Gagal menambah bengkel: ${error.message}`, 'error');
         return null;
     } finally {
         showLoading(false);
@@ -562,27 +576,36 @@ async function addBengkel(bengkel) {
  */
 async function updateBengkel(id, updates) {
     showLoading(true);
-    
     try {
-        console.log('✏️ Memperbarui bengkel ID:', id);
-        
-        // Cari index bengkel
-        const index = bengkelData.findIndex(b => b.id === id);
-        if (index === -1) {
-            showNotification('Bengkel tidak ditemukan!', 'error');
-            return null;
+        // Pastikan tipe data numerik benar
+        const updateData = {
+            name: updates.name,
+            type: updates.type,
+            area: updates.area,
+            address: updates.address,
+            lat: parseFloat(updates.lat),
+            lng: parseFloat(updates.lng),
+            rating: parseFloat(updates.rating)
+        };
+
+        console.log('Data update yang akan dikirim:', updateData);
+
+        const { data, error } = await supabase
+            .from('bengkel')
+            .update(updateData)
+            .eq('id', id)
+            .select();
+
+        if (error) {
+            console.error('Error detail:', error);
+            throw error;
         }
         
-        // Update data
-        bengkelData[index] = { ...bengkelData[index], ...updates };
-        
-        console.log('✅ Bengkel berhasil diperbarui:', bengkelData[index]);
         showNotification('Bengkel berhasil diperbarui!', 'success');
-        return bengkelData[index];
-        
+        return data[0];
     } catch (error) {
-        console.error('❌ Error memperbarui bengkel:', error);
-        showNotification('Terjadi kesalahan saat memperbarui bengkel', 'error');
+        console.error('Error update bengkel:', error);
+        showNotification(`Gagal memperbarui bengkel: ${error.message}`, 'error');
         return null;
     } finally {
         showLoading(false);
@@ -590,7 +613,7 @@ async function updateBengkel(id, updates) {
 }
 
 /**
- * Hapus bengkel dari data lokal
+ * Hapus bengkel dari Supabase
  */
 async function deleteBengkel(id) {
     if (!confirm('Apakah Anda yakin ingin menghapus bengkel ini?')) {
@@ -598,26 +621,20 @@ async function deleteBengkel(id) {
     }
     
     showLoading(true);
-    
     try {
-        console.log('🗑️ Menghapus bengkel ID:', id);
+        const { error } = await supabase
+            .from('bengkel')
+            .delete()
+            .eq('id', id);
         
-        // Hapus dari array data
-        const index = bengkelData.findIndex(b => b.id === id);
-        if (index === -1) {
-            showNotification('Bengkel tidak ditemukan!', 'error');
-            return false;
-        }
-        
-        bengkelData.splice(index, 1);
+        if (error) throw error;
         
         console.log('✅ Bengkel berhasil dihapus');
         showNotification('Bengkel berhasil dihapus!', 'success');
         return true;
-        
     } catch (error) {
         console.error('❌ Error menghapus bengkel:', error);
-        showNotification('Terjadi kesalahan saat menghapus bengkel', 'error');
+        showNotification('Gagal menghapus bengkel', 'error');
         return false;
     } finally {
         showLoading(false);
@@ -858,13 +875,13 @@ async function handleFormSubmit(event) {
     
     const formData = new FormData(event.target);
     const bengkelData = {
-        name: formData.get('name'),
+        name: formData.get('name').trim(),
         type: formData.get('type'),
         area: formData.get('area'),
-        address: formData.get('address'),
-        lat: parseFloat(formData.get('lat')),
-        lng: parseFloat(formData.get('lng')),
-        rating: parseFloat(formData.get('rating'))
+        address: formData.get('address').trim(),
+        lat: formData.get('lat'),
+        lng: formData.get('lng'),
+        rating: formData.get('rating') || '4.0'
     };
     
     // Validasi data
@@ -873,10 +890,36 @@ async function handleFormSubmit(event) {
         return;
     }
     
-    if (isNaN(bengkelData.lat) || isNaN(bengkelData.lng)) {
+    // Validasi koordinat
+    const lat = parseFloat(bengkelData.lat);
+    const lng = parseFloat(bengkelData.lng);
+    
+    if (isNaN(lat) || isNaN(lng)) {
         showNotification('Koordinat latitude dan longitude harus valid!', 'error');
         return;
     }
+    
+    if (lat < -90 || lat > 90) {
+        showNotification('Latitude harus antara -90 dan 90!', 'error');
+        return;
+    }
+    
+    if (lng < -180 || lng > 180) {
+        showNotification('Longitude harus antara -180 dan 180!', 'error');
+        return;
+    }
+    
+    // Validasi rating
+    const rating = parseFloat(bengkelData.rating);
+    if (isNaN(rating) || rating < 0 || rating > 5) {
+        showNotification('Rating harus antara 0 dan 5!', 'error');
+        return;
+    }
+    
+    // Update data dengan nilai yang sudah diparse
+    bengkelData.lat = lat;
+    bengkelData.lng = lng;
+    bengkelData.rating = rating;
     
     let result;
     if (currentEditingId) {
@@ -1308,90 +1351,8 @@ function setupNavigation() {
 // ==================== MAIN INITIALIZATION ====================
 
 /**
- * Inisialisasi aplikasi utama
+ * Migrasi data lokal ke Supabase
  */
-async function fetchBengkelData() {
-    showLoading(true);
-    try {
-        const { data, error } = await supabase
-            .from('bengkel')
-            .select('*')
-            .order('name');
-        
-        if (error) throw error;
-        return data || [];
-    } catch (error) {
-        console.error('Error mengambil data:', error);
-        showNotification('Gagal mengambil data', 'error');
-        return []; // Return array kosong jika error
-    } finally {
-        showLoading(false);
-    }
-}
-
-async function addBengkel(bengkel) {
-    showLoading(true);
-    try {
-        const { data, error } = await supabase
-            .from('bengkel')
-            .insert([bengkel])
-            .select();
-        
-        if (error) throw error;
-        showNotification('Bengkel berhasil ditambahkan!', 'success');
-        return data[0];
-    } catch (error) {
-        console.error('Error menambah bengkel:', error);
-        showNotification('Gagal menambah bengkel', 'error');
-        return null;
-    } finally {
-        showLoading(false);
-    }
-}
-
-async function updateBengkel(id, updates) {
-    showLoading(true);
-    try {
-        const { data, error } = await supabase
-            .from('bengkel')
-            .update(updates)
-            .eq('id', id)
-            .select();
-        
-        if (error) throw error;
-        showNotification('Bengkel berhasil diperbarui!', 'success');
-        return data[0];
-    } catch (error) {
-        console.error('Error update bengkel:', error);
-        showNotification('Gagal memperbarui bengkel', 'error');
-        return null;
-    } finally {
-        showLoading(false);
-    }
-}
-
-async function deleteBengkel(id) {
-    if (!confirm('Apakah Anda yakin ingin menghapus bengkel ini?')) return false;
-    
-    showLoading(true);
-    try {
-        const { error } = await supabase
-            .from('bengkel')
-            .delete()
-            .eq('id', id);
-        
-        if (error) throw error;
-        showNotification('Bengkel berhasil dihapus!', 'success');
-        return true;
-    } catch (error) {
-        console.error('Error hapus bengkel:', error);
-        showNotification('Gagal menghapus bengkel', 'error');
-        return false;
-    } finally {
-        showLoading(false);
-    }
-}
-
 async function migrateLocalDataToSupabase() {
     showLoading(true);
     try {
@@ -1423,27 +1384,22 @@ async function migrateLocalDataToSupabase() {
     }
 }
 
+/**
+ * Inisialisasi aplikasi utama
+ */
 async function initializeApp() {
     console.log('🚀 Aplikasi Bengkel Palu dimulai...');
     
     showLoading(true);
     
-    async function initializeApp() {
-    // ... kode lainnya ...
-    
-    // Migrasi data lokal ke Supabase (jika diperlukan)
-    await migrateLocalDataToSupabase();
-    
-    // Load data dari Supabase
-    bengkelData = await fetchBengkelData();
-    
-    // ... kode lainnya ...
-}
     try {
         // Setup navigasi terlebih dahulu
         setupNavigation();
         
-        // Load data dari data lokal
+        // Migrasi data lokal ke Supabase (jika diperlukan)
+        await migrateLocalDataToSupabase();
+        
+        // Load data dari Supabase
         bengkelData = await fetchBengkelData();
         console.log('Data loaded:', bengkelData.length, 'bengkel');
         
@@ -1482,14 +1438,6 @@ async function initializeApp() {
         showLoading(false);
     }
 }
-
-// ==================== SUPABASE CONFIGURATION ====================
-// GANTI dengan URL dan key dari project Supabase Anda
-const SUPABASE_URL = 'https://itqsxhwjjsopqlnoziui.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0cXN4aHdqanNvcHFsbm96aXVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NzI5OTAsImV4cCI6MjA3NTE0ODk5MH0.nCv1U-uXiVZwG6uVXtzIPDNpIZeYNdolGqOsH32yLD0';
-
-// Inisialisasi Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Start the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeApp);
